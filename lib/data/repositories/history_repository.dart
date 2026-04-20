@@ -72,7 +72,7 @@ class HistoryRepository {
       ON CONFLICT(coordinate_key) DO UPDATE SET
         latitude = excluded.latitude,
         longitude = excluded.longitude,
-        location_name = COALESCE(excluded.location_name, location_name),
+        location_name = COALESCE(location_name, excluded.location_name),
         last_used_at = excluded.last_used_at,
         use_count = use_count + 1
       ''',
@@ -88,6 +88,20 @@ class HistoryRepository {
 
     final saved = await findLocation(session.latitude, session.longitude);
     return saved!;
+  }
+
+  Future<void> updateLocationName(
+    LocationHistoryModel item,
+    String? locationName,
+  ) async {
+    await _database.customStatement(
+      '''
+      UPDATE location_history
+      SET location_name = ?
+      WHERE coordinate_key = ?
+      ''',
+      [_blankToNull(locationName), item.coordinateKey],
+    );
   }
 
   Future<String?> getCachedLocationName(
@@ -192,7 +206,7 @@ class HistoryRepository {
 }
 
 class _HistoryDatabase extends GeneratedDatabase {
-  _HistoryDatabase(QueryExecutor executor) : super(executor);
+  _HistoryDatabase(super.executor);
 
   @override
   Iterable<TableInfo<Table, Object?>> get allTables => const [];

@@ -21,6 +21,32 @@ class LocationHistoryModel {
   final int useCount;
   final String? locationName;
 
+  static const Object _unchanged = Object();
+
+  LocationHistoryModel copyWith({
+    int? id,
+    String? coordinateKey,
+    double? latitude,
+    double? longitude,
+    DateTime? firstUsedAt,
+    DateTime? lastUsedAt,
+    int? useCount,
+    Object? locationName = _unchanged,
+  }) {
+    return LocationHistoryModel(
+      id: id ?? this.id,
+      coordinateKey: coordinateKey ?? this.coordinateKey,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      firstUsedAt: firstUsedAt ?? this.firstUsedAt,
+      lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+      useCount: useCount ?? this.useCount,
+      locationName: identical(locationName, _unchanged)
+          ? this.locationName
+          : locationName as String?,
+    );
+  }
+
   factory LocationHistoryModel.fromRow(Map<String, Object?> row) {
     return LocationHistoryModel(
       id: row['id'] as int?,

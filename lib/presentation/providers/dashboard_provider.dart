@@ -175,6 +175,33 @@ class DashboardProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateHistoryLocationName(
+    LocationHistoryModel item,
+    String? locationName,
+  ) async {
+    await _historyRepository.updateLocationName(item, locationName);
+    final trimmed = locationName?.trim();
+    final savedName = trimmed == null || trimmed.isEmpty ? null : trimmed;
+    history = history
+        .map(
+          (historyItem) => historyItem.coordinateKey == item.coordinateKey
+              ? historyItem.copyWith(locationName: savedName)
+              : historyItem,
+        )
+        .toList();
+
+    final current = session;
+    if (current != null &&
+        LocationHistoryModel.coordinateKeyFor(
+              current.latitude,
+              current.longitude,
+            ) ==
+            item.coordinateKey) {
+      currentLocationName = savedName;
+    }
+    notifyListeners();
+  }
+
   Future<void> useHistoryLocation(LocationHistoryModel item) async {
     final draft = item.toSession(session ?? _repository.loadLastSession());
     session = draft;

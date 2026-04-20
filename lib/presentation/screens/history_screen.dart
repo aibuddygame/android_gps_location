@@ -67,33 +67,163 @@ class HistoryScreen extends StatelessWidget {
   }
 }
 
-class _HistoryTile extends StatelessWidget {
+class _HistoryTile extends StatefulWidget {
   const _HistoryTile({required this.item});
 
   final LocationHistoryModel item;
+
+  @override
+  State<_HistoryTile> createState() => _HistoryTileState();
+}
+
+class _HistoryTileState extends State<_HistoryTile> {
+  late final TextEditingController _nameController;
+  bool _isEditing = false;
+  bool _isSaving = false;
+
+  LocationHistoryModel get item => widget.item;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: item.locationName ?? '');
+  }
+
+  @override
+  void didUpdateWidget(covariant _HistoryTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_isEditing && oldWidget.item.locationName != item.locationName) {
+      _nameController.text = item.locationName ?? '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final title = item.locationName?.trim();
 
     return Card(
-      child: ListTile(
-        leading: const Icon(Icons.history),
-        title: Text(title == null || title.isEmpty ? item.coordinates : title),
-        subtitle: Text(
-          '${item.coordinates}\n'
-          'Used ${item.useCount} time${item.useCount == 1 ? '' : 's'} '
-          'last at ${item.lastUsedAt.toDebugTime()}',
+      child: InkWell(
+        onTap: _isEditing
+            ? null
+            : () async {
+                await context.read<DashboardProvider>().useHistoryLocation(
+                      item,
+                    );
+                if (context.mounted) {
+                  Navigator.pop<LocationHistoryModel>(context, item);
+                }
+              },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(top: 4),
+                child: Icon(Icons.history),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_isEditing)
+                      TextField(
+                        controller: _nameController,
+                        autofocus: true,
+                        textInputAction: TextInputAction.done,
+                        decoration: const InputDecoration(
+                          labelText: 'Location name',
+                          hintText: 'Custom name',
+                          isDense: true,
+                        ),
+                        onSubmitted: (_) => _saveName(context),
+                      )
+                    else
+                      Text(
+                        title == null || title.isEmpty
+                            ? item.coordinates
+                            : title,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${item.coordinates}\n'
+                      'Used ${item.useCount} '
+                      'time${item.useCount == 1 ? '' : 's'} '
+                      'last at ${item.lastUsedAt.toDebugTime()}',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (_isEditing) ...[
+                IconButton(
+                  tooltip: 'Cancel',
+                  onPressed: _isSaving ? null : _cancelEdit,
+                  icon: const Icon(Icons.close),
+                ),
+                IconButton(
+                  tooltip: 'Save',
+                  onPressed: _isSaving ? null : () => _saveName(context),
+                  icon: _isSaving
+                      ? const SizedBox.square(
+                          dimension: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.check),
+                ),
+              ] else ...[
+                IconButton(
+                  tooltip: 'Edit name',
+                  onPressed: () {
+                    setState(() {
+                      _isEditing = true;
+                      _nameController.text = item.locationName ?? '';
+                      _nameController.selection = TextSelection.fromPosition(
+                        TextPosition(offset: _nameController.text.length),
+                      );
+                    });
+                  },
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Icon(Icons.north_west),
+                ),
+              ],
+            ],
+          ),
         ),
-        isThreeLine: true,
-        trailing: const Icon(Icons.north_west),
-        onTap: () async {
-          await context.read<DashboardProvider>().useHistoryLocation(item);
-          if (context.mounted) {
-            Navigator.pop<LocationHistoryModel>(context, item);
-          }
-        },
       ),
     );
+  }
+
+  void _cancelEdit() {
+    setState(() {
+      _nameController.text = item.locationName ?? '';
+      _isEditing = false;
+    });
+  }
+
+  Future<void> _saveName(BuildContext context) async {
+    setState(() => _isSaving = true);
+    try {
+      await context.read<DashboardProvider>().updateHistoryLocationName(
+            item,
+            _nameController.text,
+          );
+      if (!mounted) return;
+      setState(() => _isEditing = false);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 }
