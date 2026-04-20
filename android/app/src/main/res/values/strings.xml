@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">GPS Location Changer</string>
+    <string name="mock_location_channel">Mock location session</string>
+</resources>

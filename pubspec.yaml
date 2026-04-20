@@ -1,0 +1,31 @@
+name: gps_location_changer
+description: A QA-only Android mock location testing utility.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  geolocator: ^13.0.2
+  drift: ^2.22.1
+  http: ^1.2.2
+  location: ^7.0.1
+  path: ^1.9.0
+  path_provider: ^2.1.5
+  provider: ^6.1.2
+  shared_preferences: ^2.3.2
+  sqlite3_flutter_libs: ^0.5.26
+
+dev_dependencies:
+  build_runner: ^2.4.13
+  drift_dev: ^2.22.1
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
