@@ -5,6 +5,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/utils/location_validator.dart';
 import '../../domain/entities/location_preset.dart';
 import '../../domain/entities/mock_location_session.dart';
+import '../../services/openstreetmap_service.dart';
 import '../providers/dashboard_provider.dart';
 import '../widgets/debug_panel.dart';
 import '../widgets/location_name_display.dart';
@@ -28,6 +29,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _speed = TextEditingController();
   final _bearing = TextEditingController();
   final _interval = TextEditingController();
+  final _searchController = TextEditingController();
 
   @override
   void didChangeDependencies() {
@@ -52,6 +54,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _speed.dispose();
     _bearing.dispose();
     _interval.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -114,6 +117,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: Colors.green.shade700,
               ),
             _SetupBanner(provider: provider),
+            _SearchField(
+              controller: _searchController,
+              onChanged: provider.searchLocation,
+              isSearching: provider.isSearching,
+              results: provider.searchResults,
+              onResultSelected: (result) {
+                _latitude.text = result.lat.toString();
+                _longitude.text = result.lon.toString();
+                provider.applySearchResult(result);
+              },
+              onClear: () {
+                _searchController.clear();
+                provider.clearSearch();
+              },
+            ),
             if (provider.session != null) ...[
               LocationNameDisplay(
                 latitude: provider.session!.latitude,
@@ -398,6 +416,85 @@ class _MessageBox extends StatelessWidget {
           child: Text(message, style: TextStyle(color: color)),
         ),
       ),
+    );
+  }
+}
+
+class _SearchField extends StatelessWidget {
+  const _SearchField({
+    required this.controller,
+    required this.onChanged,
+    required this.isSearching,
+    required this.results,
+    required this.onResultSelected,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final bool isSearching;
+  final List<OSMSearchResult> results;
+  final ValueChanged<OSMSearchResult> onResultSelected;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          onChanged: onChanged,
+          decoration: InputDecoration(
+            labelText: 'Search Location',
+            hintText: 'Type place name (e.g., Tokyo Station)',
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: isSearching
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : controller.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: onClear,
+                      )
+                    : null,
+          ),
+        ),
+        if (results.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Card(
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: results.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final result = results[index];
+                return ListTile(
+                  dense: true,
+                  title: Text(result.name),
+                  subtitle: Text(
+                    '${result.displayName.substring(0, result.displayName.length > 50 ? 50 : result.displayName.length)}...',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: Text(
+                    '${result.lat.toStringAsFixed(4)}, ${result.lon.toStringAsFixed(4)}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  onTap: () => onResultSelected(result),
+                );
+              },
+            ),
+          ),
+        ],
+        const SizedBox(height: 16),
+      ],
     );
   }
 }

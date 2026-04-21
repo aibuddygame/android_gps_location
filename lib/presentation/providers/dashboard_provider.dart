@@ -12,6 +12,7 @@ import '../../domain/entities/mock_location_session.dart';
 import '../../domain/usecases/build_mock_location_session.dart';
 import '../../services/geocoding_service.dart';
 import '../../services/mock_location_service.dart';
+import '../../services/openstreetmap_service.dart';
 
 class DashboardProvider extends ChangeNotifier {
   DashboardProvider({
@@ -30,14 +31,18 @@ class DashboardProvider extends ChangeNotifier {
   final MockLocationService _mockLocationService;
   final GeocodingService _geocodingService;
   final PermissionHandler _permissionHandler;
+  final OpenStreetMapService _osmService = OpenStreetMapService();
   final BuildMockLocationSession _buildSession =
       const BuildMockLocationSession();
+  Timer? _searchDebounce;
 
   List<LocationPreset> presets = const [];
   List<LocationHistoryModel> history = const [];
+  List<OSMSearchResult> searchResults = const [];
   MockLocationSession? session;
   PermissionStatusSnapshot? permissionStatus;
   bool isBusy = false;
+  bool isSearching = false;
   bool isResolvingLocationName = false;
   String? errorMessage;
   String? infoMessage;
@@ -239,6 +244,44 @@ class DashboardProvider extends ChangeNotifier {
     infoMessage = null;
   }
 
+  Future<void> searchLocation(String query) async {
+    _searchDebounce?.cancel();
+    if (query.trim().length < 2) {
+      searchResults = const [];
+      notifyListeners();
+      return;
+    }
+    
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () async {
+      isSearching = true;
+      errorMessage = null;
+      notifyListeners();
+      
+      try {
+        searchResults = await _osmService.search(query);
+      } catch (e) {
+        errorMessage = 'Search failed: $e';
+        searchResults = const [];
+      } finally {
+        isSearching = false;
+        notifyListeners();
+      }
+    });
+  }
+
+  void clearSearch() {
+    searchResults = const [];
+    _searchDebounce?.cancel();
+    notifyListeners();
+  }
+
+  void applySearchResult(OSMSearchResult result) {
+    searchResults = const [];
+    _searchDebounce?.cancel();
+    infoMessage = 'Selected: ${result.name}';
+    notifyListeners();
+  }
+
   Future<void> _runBusy(Future<void> Function() action) async {
     isBusy = true;
     notifyListeners();
@@ -282,6 +325,8 @@ class DashboardProvider extends ChangeNotifier {
   @override
   void dispose() {
     _debugTimer?.cancel();
+    _searchDebounce?.cancel();
+    _osmService.dispose();
     _geocodingService.dispose();
     super.dispose();
   }
