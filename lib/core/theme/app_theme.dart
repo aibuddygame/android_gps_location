@@ -179,23 +179,31 @@ class AppTheme {
     );
   }
 
-  static BoxDecoration get cyanGradient {
-    return const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [cyan, Color(0xFF00A8CC)],
-      ),
+  static Gradient get cyanGradient {
+    return const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [cyan, Color(0xFF00A8CC)],
     );
   }
 
-  static BoxDecoration get purpleGradient {
-    return const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [purple, Color(0xFF7B2CBF)],
-      ),
+  static Gradient get purpleGradient {
+    return const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [purple, Color(0xFF7B2CBF)],
+    );
+  }
+
+  static BoxDecoration get cyanGradientBox {
+    return BoxDecoration(
+      gradient: cyanGradient,
+    );
+  }
+
+  static BoxDecoration get purpleGradientBox {
+    return BoxDecoration(
+      gradient: purpleGradient,
     );
   }
 

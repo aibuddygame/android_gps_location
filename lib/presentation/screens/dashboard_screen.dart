@@ -173,7 +173,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Expanded(
                           child: _GradientButton(
                             onPressed: provider.isBusy || active ? null : _start,
-                            gradient: AppTheme.cyanGradient,
+                            gradient: AppTheme.cyan,
                             icon: Icons.play_arrow_rounded,
                             label: 'START',
                           ),
@@ -182,7 +182,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Expanded(
                           child: _GradientButton(
                             onPressed: provider.isBusy || !active ? null : provider.stop,
-                            gradient: AppTheme.purpleGradient,
+                            gradient: AppTheme.purple,
                             icon: Icons.stop_rounded,
                             label: 'STOP',
                             isSecondary: true,
@@ -699,7 +699,7 @@ class _GradientButton extends StatelessWidget {
   });
 
   final VoidCallback? onPressed;
-  final BoxDecoration gradient;
+  final Color gradient;
   final IconData icon;
   final String label;
   final bool isSecondary;
@@ -713,7 +713,8 @@ class _GradientButton extends StatelessWidget {
               color: AppTheme.greyDark,
               borderRadius: BorderRadius.circular(16),
             )
-          : gradient.copyWith(
+          : BoxDecoration(
+              color: gradient,
               borderRadius: BorderRadius.circular(16),
             ),
       child: Material(
