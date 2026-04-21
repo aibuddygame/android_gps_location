@@ -29,6 +29,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _bearing = TextEditingController();
   final _interval = TextEditingController();
   final _searchController = TextEditingController();
+  bool _consentChecked = false;
 
   @override
   void didChangeDependencies() {
@@ -39,10 +40,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _applySession(session);
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!provider.hasAcceptedConsent && mounted) {
-        Navigator.pushNamed(context, ConsentScreen.routeName);
-      } else if (!provider.hasSeenOnboarding && mounted) {
-        Navigator.pushNamed(context, OnboardingScreen.routeName);
+      if (!_consentChecked && mounted) {
+        _consentChecked = true;
+        if (!provider.hasAcceptedConsent) {
+          Navigator.pushNamed(context, ConsentScreen.routeName);
+        } else if (!provider.hasSeenOnboarding) {
+          Navigator.pushNamed(context, OnboardingScreen.routeName);
+        }
       }
     });
   }
@@ -64,14 +68,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final provider = context.watch<DashboardProvider>();
     final active = provider.session?.isActive == true;
     
-    // Check consent on every build (in case user just returned from consent screen)
-    if (!provider.hasAcceptedConsent) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && !provider.hasAcceptedConsent) {
-          Navigator.pushNamed(context, ConsentScreen.routeName);
-        }
-      });
-    }
+
     
     if (_latitude.text.isEmpty && provider.session != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
