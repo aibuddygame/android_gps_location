@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/location_validator.dart';
 import '../../domain/entities/location_preset.dart';
 import '../../domain/entities/mock_location_session.dart';
 import '../../services/openstreetmap_service.dart';
 import '../providers/dashboard_provider.dart';
-import '../widgets/debug_panel.dart';
-import '../widgets/location_name_display.dart';
-import '../widgets/status_pill.dart';
 import 'consent_screen.dart';
 import 'history_screen.dart';
 import 'onboarding_screen.dart';
@@ -74,284 +72,268 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     return Scaffold(
+      backgroundColor: AppTheme.background,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text(AppConstants.appName),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            colors: [AppTheme.cyan, AppTheme.purple],
+          ).createShader(bounds),
+          child: const Text(
+            AppConstants.appName,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+            ),
+          ),
+        ),
         actions: [
-          IconButton(
-            tooltip: 'Setup',
-            onPressed: () =>
-                Navigator.pushNamed(context, OnboardingScreen.routeName),
-            icon: const Icon(Icons.settings_outlined),
+          _IconButton(
+            icon: Icons.history,
+            onPressed: _openHistory,
+          ),
+          _IconButton(
+            icon: Icons.bookmarks_outlined,
+            onPressed: _openPresets,
+          ),
+          _IconButton(
+            icon: Icons.settings_outlined,
+            onPressed: () => Navigator.pushNamed(context, OnboardingScreen.routeName),
           ),
         ],
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Row(
-              children: [
-                StatusPill(
-                  active: active,
-                  label: active ? 'Active' : 'Inactive',
+      body: Container(
+        decoration: AppTheme.gradientBackground,
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              // Status Card
+              _StatusCard(active: active),
+              const SizedBox(height: 24),
+              // Search
+              _SearchField(
+                controller: _searchController,
+                onChanged: provider.searchLocation,
+                isSearching: provider.isSearching,
+                results: provider.searchResults,
+                onResultSelected: (result) {
+                  _latitude.text = result.lat.toString();
+                  _longitude.text = result.lon.toString();
+                  provider.applySearchResult(result);
+                },
+                onClear: () {
+                  _searchController.clear();
+                  provider.clearSearch();
+                },
+              ),
+              const SizedBox(height: 20),
+              // Location Display
+              if (provider.currentLocationName != null || provider.session != null)
+                _LocationCard(
+                  name: provider.currentLocationName ?? 'Custom Location',
+                  lat: double.tryParse(_latitude.text) ?? provider.session?.latitude ?? 0,
+                  lng: double.tryParse(_longitude.text) ?? provider.session?.longitude ?? 0,
                 ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: _openHistory,
-                  icon: const Icon(Icons.history),
-                  label: const Text('History'),
+              const SizedBox(height: 24),
+              // Hidden form
+              Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _HiddenTextField(
+                            controller: _latitude,
+                            validator: (v) => LocationValidator.validateLatitude(v ?? ''),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _HiddenTextField(
+                            controller: _longitude,
+                            validator: (v) => LocationValidator.validateLongitude(v ?? ''),
+                          ),
+                        ),
+                      ],
+                    ),
+                    _AdvancedParameters(
+                      accuracyController: _accuracy,
+                      speedController: _speed,
+                      bearingController: _bearing,
+                      intervalController: _interval,
+                    ),
+                    const SizedBox(height: 24),
+                    // Action Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _GradientButton(
+                            onPressed: provider.isBusy || active ? null : _start,
+                            gradient: AppTheme.cyanGradient,
+                            icon: Icons.play_arrow_rounded,
+                            label: 'START',
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _GradientButton(
+                            onPressed: provider.isBusy || !active ? null : provider.stop,
+                            gradient: AppTheme.purpleGradient,
+                            icon: Icons.stop_rounded,
+                            label: 'STOP',
+                            isSecondary: true,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                TextButton.icon(
-                  onPressed: _openPresets,
-                  icon: const Icon(Icons.bookmarks_outlined),
-                  label: const Text('Presets'),
+              ),
+              const SizedBox(height: 24),
+              // Messages
+              if (provider.errorMessage != null)
+                _MessageBox(
+                  message: provider.errorMessage!,
+                  isError: true,
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (provider.errorMessage != null)
-              _MessageBox(
-                message: provider.errorMessage!,
-                color: Colors.red.shade700,
-              ),
-            if (provider.infoMessage != null)
-              _MessageBox(
-                message: provider.infoMessage!,
-                color: Colors.green.shade700,
-              ),
-            _SetupBanner(provider: provider),
-            // 1. Search Location (Primary)
-            _SearchField(
-              controller: _searchController,
-              onChanged: provider.searchLocation,
-              isSearching: provider.isSearching,
-              results: provider.searchResults,
-              onResultSelected: (result) {
-                _latitude.text = result.lat.toString();
-                _longitude.text = result.lon.toString();
-                provider.applySearchResult(result);
-              },
-              onClear: () {
-                _searchController.clear();
-                provider.clearSearch();
-              },
-            ),
-            // 2. Selected Place Name (Prominent)
-            if (provider.currentLocationName != null || provider.session != null)
-              _LocationDisplay(
-                name: provider.currentLocationName ?? 'Custom Location',
-                lat: double.tryParse(_latitude.text) ?? provider.session?.latitude ?? 0,
-                lng: double.tryParse(_longitude.text) ?? provider.session?.longitude ?? 0,
-              ),
-            const SizedBox(height: 16),
-            // Hidden form fields for validation
-            Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  // Hidden lat/lng fields
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _latitude,
-                          decoration: const InputDecoration(
-                            labelText: 'Latitude',
-                          ),
-                          keyboardType: const TextInputType.numberWithOptions(
-                            signed: true,
-                            decimal: true,
-                          ),
-                          validator: (value) =>
-                              LocationValidator.validateLatitude(value ?? ''),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _longitude,
-                          decoration: const InputDecoration(
-                            labelText: 'Longitude',
-                          ),
-                          keyboardType: const TextInputType.numberWithOptions(
-                            signed: true,
-                            decimal: true,
-                          ),
-                          validator: (value) =>
-                              LocationValidator.validateLongitude(value ?? ''),
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Advanced parameters (hidden by default)
-                  _AdvancedParameters(
-                    accuracyController: _accuracy,
-                    speedController: _speed,
-                    bearingController: _bearing,
-                    intervalController: _interval,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: provider.isBusy || active ? null : _start,
-                          icon: const Icon(Icons.play_arrow),
-                          label: const Text('Start mock'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed:
-                              provider.isBusy || !active ? null : provider.stop,
-                          icon: const Icon(Icons.stop),
-                          label: const Text('Stop'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            DebugPanel(session: provider.session),
-          ],
+              if (provider.infoMessage != null)
+                _MessageBox(
+                  message: provider.infoMessage!,
+                  isError: false,
+                ),
+            ],
+          ),
         ),
       ),
     );
-  }
-
-  Future<void> _openHistory() async {
-    await Navigator.pushNamed(context, HistoryScreen.routeName);
-    if (!mounted) return;
-    final session = context.read<DashboardProvider>().session;
-    if (session != null) _applySession(session);
-  }
-
-  Future<void> _openPresets() async {
-    final preset = await Navigator.pushNamed<LocationPreset>(
-      context,
-      PresetsScreen.routeName,
-    );
-    if (preset == null) return;
-    _latitude.text = preset.latitude.toStringAsFixed(7);
-    _longitude.text = preset.longitude.toStringAsFixed(7);
-    await _persistDraft();
-  }
-
-  Future<void> _start() async {
-    if (!_formKey.currentState!.validate()) return;
-    await _persistDraft();
-    if (!mounted) return;
-    await context.read<DashboardProvider>().start(
-          latitude: double.parse(_latitude.text.trim()),
-          longitude: double.parse(_longitude.text.trim()),
-          accuracy: _parseDouble(
-            _accuracy.text,
-            AppConstants.defaultAccuracyMeters,
-          ),
-          speed: _parseDouble(_speed.text, 0),
-          bearing: _parseDouble(_bearing.text, 0),
-          intervalMs: int.parse(_interval.text.trim()),
-        );
-  }
-
-  Future<void> _persistDraft() {
-    return context.read<DashboardProvider>().persistDraft(
-          MockLocationSession(
-            latitude: double.parse(_latitude.text.trim()),
-            longitude: double.parse(_longitude.text.trim()),
-            accuracy: _parseDouble(
-              _accuracy.text,
-              AppConstants.defaultAccuracyMeters,
-            ),
-            speed: _parseDouble(_speed.text, 0),
-            bearing: _parseDouble(_bearing.text, 0),
-            intervalMs: int.tryParse(_interval.text.trim()) ??
-                AppConstants.defaultIntervalMs,
-          ),
-        );
   }
 
   void _applySession(MockLocationSession session) {
-    _latitude.text = session.latitude.toStringAsFixed(7);
-    _longitude.text = session.longitude.toStringAsFixed(7);
-    _accuracy.text = session.accuracy.toStringAsFixed(1);
-    _speed.text = session.speed.toStringAsFixed(1);
-    _bearing.text = session.bearing.toStringAsFixed(1);
+    _latitude.text = session.latitude.toString();
+    _longitude.text = session.longitude.toString();
+    _accuracy.text = session.accuracy.toString();
+    _speed.text = session.speed.toString();
+    _bearing.text = session.bearing.toString();
     _interval.text = session.intervalMs.toString();
   }
 
-  double _parseDouble(String value, double fallback) {
-    return double.tryParse(value.trim()) ?? fallback;
-  }
-}
-
-class _SetupBanner extends StatelessWidget {
-  const _SetupBanner({required this.provider});
-
-  final DashboardProvider provider;
-
-  @override
-  Widget build(BuildContext context) {
-    final status = provider.permissionStatus;
-    if (status?.ready == true) return const SizedBox.shrink();
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Setup required',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Grant location permission, enable device location, and select this app as the mock-location app.',
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                TextButton(
-                  onPressed: provider.refreshChecks,
-                  child: const Text('Recheck'),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: () =>
-                      Navigator.pushNamed(context, OnboardingScreen.routeName),
-                  child: const Text('Setup'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+  Future<void> _start() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final provider = context.read<DashboardProvider>();
+    await provider.start(
+      latitude: double.parse(_latitude.text),
+      longitude: double.parse(_longitude.text),
+      accuracy: double.tryParse(_accuracy.text) ?? AppConstants.defaultAccuracyMeters,
+      speed: double.tryParse(_speed.text) ?? 0,
+      bearing: double.tryParse(_bearing.text) ?? 0,
+      intervalMs: int.tryParse(_interval.text) ?? AppConstants.defaultIntervalMs,
     );
   }
+
+  void _openHistory() => Navigator.pushNamed(context, HistoryScreen.routeName);
+  void _openPresets() => Navigator.pushNamed(context, PresetsScreen.routeName);
 }
 
-class _MessageBox extends StatelessWidget {
-  const _MessageBox({required this.message, required this.color});
+// Modern UI Components
 
-  final String message;
-  final Color color;
+class _IconButton extends StatelessWidget {
+  const _IconButton({required this.icon, required this.onPressed});
+  final IconData icon;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border.all(color: color),
-          borderRadius: BorderRadius.circular(8),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Material(
+        color: AppTheme.surfaceLight,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            child: Icon(icon, color: AppTheme.cyan, size: 20),
+          ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Text(message, style: TextStyle(color: color)),
+      ),
+    );
+  }
+}
+
+class _StatusCard extends StatelessWidget {
+  const _StatusCard({required this.active});
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: active
+            ? LinearGradient(
+                colors: [
+                  AppTheme.green.withOpacity(0.2),
+                  AppTheme.cyan.withOpacity(0.1),
+                ],
+              )
+            : null,
+        color: active ? null : AppTheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: active ? AppTheme.green.withOpacity(0.5) : AppTheme.greyDark,
+          width: 1,
         ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: active ? AppTheme.green : AppTheme.grey,
+              boxShadow: active
+                  ? [
+                      BoxShadow(
+                        color: AppTheme.green.withOpacity(0.5),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                      ),
+                    ]
+                  : null,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                active ? 'MOCK ACTIVE' : 'READY',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: active ? AppTheme.green : AppTheme.grey,
+                  letterSpacing: 1,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                active
+                    ? 'Injecting location data'
+                    : 'Select location to begin',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppTheme.grey,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -379,52 +361,102 @@ class _SearchField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextField(
-          controller: controller,
-          onChanged: onChanged,
-          decoration: InputDecoration(
-            labelText: 'Search Location',
-            hintText: 'Type place name (e.g., Tokyo Station)',
-            prefixIcon: const Icon(Icons.search),
-            suffixIcon: isSearching
-                ? const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: SizedBox.square(
-                      dimension: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  )
-                : controller.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: onClear,
-                      )
-                    : null,
+        Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceLight,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppTheme.cyan.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: TextField(
+            controller: controller,
+            onChanged: onChanged,
+            style: const TextStyle(color: AppTheme.white),
+            decoration: InputDecoration(
+              hintText: 'Search location...',
+              hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.7)),
+              prefixIcon: const Icon(Icons.search, color: AppTheme.cyan),
+              suffixIcon: isSearching
+                  ? const Padding(
+                      padding: EdgeInsets.all(14),
+                      child: SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(AppTheme.cyan),
+                        ),
+                      ),
+                    )
+                  : controller.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: AppTheme.grey),
+                          onPressed: onClear,
+                        )
+                      : null,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 18,
+              ),
+            ),
           ),
         ),
         if (results.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Card(
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppTheme.cyan.withOpacity(0.2),
+              ),
+            ),
             child: ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: results.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              separatorBuilder: (_, __) => Divider(
+                height: 1,
+                color: AppTheme.greyDark.withOpacity(0.5),
+              ),
               itemBuilder: (context, index) {
                 final result = results[index];
                 return ListTile(
                   dense: true,
-                  title: Text(result.name),
+                  title: Text(
+                    result.name,
+                    style: const TextStyle(
+                      color: AppTheme.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   subtitle: Text(
-                    result.displayName.length > 50
-                        ? '${result.displayName.substring(0, 50)}...'
+                    result.displayName.length > 40
+                        ? '${result.displayName.substring(0, 40)}...'
                         : result.displayName,
+                    style: const TextStyle(color: AppTheme.grey, fontSize: 12),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  trailing: Text(
-                    '${result.lat.toStringAsFixed(4)}, ${result.lon.toStringAsFixed(4)}',
-                    style: Theme.of(context).textTheme.bodySmall,
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.cyan.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${result.lat.toStringAsFixed(3)}, ${result.lon.toStringAsFixed(3)}',
+                      style: const TextStyle(
+                        color: AppTheme.cyan,
+                        fontSize: 11,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
                   ),
                   onTap: () => onResultSelected(result),
                 );
@@ -432,14 +464,13 @@ class _SearchField extends StatelessWidget {
             ),
           ),
         ],
-        const SizedBox(height: 16),
       ],
     );
   }
 }
 
-class _LocationDisplay extends StatelessWidget {
-  const _LocationDisplay({
+class _LocationCard extends StatelessWidget {
+  const _LocationCard({
     required this.name,
     required this.lat,
     required this.lng,
@@ -451,34 +482,95 @@ class _LocationDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Selected Location',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Colors.grey,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              name,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey,
-                    fontFamily: 'monospace',
-                  ),
-            ),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.purple.withOpacity(0.2),
+            AppTheme.cyan.withOpacity(0.1),
           ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppTheme.purple.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.location_on,
+                color: AppTheme.pink,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'SELECTED LOCATION',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.pink,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            name,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.background.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}',
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppTheme.grey,
+                fontFamily: 'monospace',
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HiddenTextField extends StatelessWidget {
+  const _HiddenTextField({
+    required this.controller,
+    required this.validator,
+  });
+
+  final TextEditingController controller;
+  final String? Function(String?) validator;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: 0,
+      child: SizedBox(
+        height: 0,
+        child: TextFormField(
+          controller: controller,
+          validator: validator,
         ),
       ),
     );
@@ -509,46 +601,33 @@ class _AdvancedParametersState extends State<_AdvancedParameters> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        const SizedBox(height: 16),
         TextButton.icon(
           onPressed: () => setState(() => _expanded = !_expanded),
-          icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
-          label: Text(_expanded ? 'Hide advanced' : 'Advanced parameters'),
+          icon: Icon(
+            _expanded ? Icons.expand_less : Icons.expand_more,
+            color: AppTheme.grey,
+          ),
+          label: Text(
+            _expanded ? 'Hide advanced' : 'Advanced parameters',
+            style: const TextStyle(color: AppTheme.grey),
+          ),
         ),
         if (_expanded) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
-                child: TextFormField(
+                child: _AdvancedField(
                   controller: widget.accuracyController,
-                  decoration: const InputDecoration(
-                    labelText: 'Accuracy m',
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  validator: (value) =>
-                      LocationValidator.validateNonNegative(
-                    value ?? '',
-                    'Accuracy',
-                  ),
+                  label: 'Accuracy (m)',
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: TextFormField(
+                child: _AdvancedField(
                   controller: widget.speedController,
-                  decoration: const InputDecoration(
-                    labelText: 'Speed m/s',
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  validator: (value) =>
-                      LocationValidator.validateNonNegative(
-                    value ?? '',
-                    'Speed',
-                  ),
+                  label: 'Speed (m/s)',
                 ),
               ),
             ],
@@ -557,41 +636,164 @@ class _AdvancedParametersState extends State<_AdvancedParameters> {
           Row(
             children: [
               Expanded(
-                child: TextFormField(
+                child: _AdvancedField(
                   controller: widget.bearingController,
-                  decoration: const InputDecoration(
-                    labelText: 'Bearing deg',
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  validator: (value) =>
-                      LocationValidator.validateNonNegative(
-                    value ?? '',
-                    'Bearing',
-                  ),
+                  label: 'Bearing (°)',
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: TextFormField(
+                child: _AdvancedField(
                   controller: widget.intervalController,
-                  decoration: const InputDecoration(
-                    labelText: 'Interval ms',
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) =>
-                      LocationValidator.validateInterval(
-                    value ?? '',
-                    AppConstants.minIntervalMs,
-                    AppConstants.maxIntervalMs,
-                  ),
+                  label: 'Interval (ms)',
                 ),
               ),
             ],
           ),
         ],
       ],
+    );
+  }
+}
+
+class _AdvancedField extends StatelessWidget {
+  const _AdvancedField({
+    required this.controller,
+    required this.label,
+  });
+
+  final TextEditingController controller;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      style: const TextStyle(color: AppTheme.white, fontSize: 14),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: AppTheme.grey, fontSize: 12),
+        filled: true,
+        fillColor: AppTheme.surfaceLight,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+      ),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    );
+  }
+}
+
+class _GradientButton extends StatelessWidget {
+  const _GradientButton({
+    required this.onPressed,
+    required this.gradient,
+    required this.icon,
+    required this.label,
+    this.isSecondary = false,
+  });
+
+  final VoidCallback? onPressed;
+  final BoxDecoration gradient;
+  final IconData icon;
+  final String label;
+  final bool isSecondary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 56,
+      decoration: onPressed == null
+          ? BoxDecoration(
+              color: AppTheme.greyDark,
+              borderRadius: BorderRadius.circular(16),
+            )
+          : gradient.copyWith(
+              borderRadius: BorderRadius.circular(16),
+            ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            decoration: isSecondary && onPressed != null
+                ? BoxDecoration(
+                    color: AppTheme.background.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(16),
+                  )
+                : null,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MessageBox extends StatelessWidget {
+  const _MessageBox({
+    required this.message,
+    required this.isError,
+  });
+
+  final String message;
+  final bool isError;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isError
+            ? AppTheme.pink.withOpacity(0.1)
+            : AppTheme.green.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isError
+              ? AppTheme.pink.withOpacity(0.3)
+              : AppTheme.green.withOpacity(0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isError ? Icons.error_outline : Icons.check_circle_outline,
+            color: isError ? AppTheme.pink : AppTheme.green,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: isError ? AppTheme.pink : AppTheme.green,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
