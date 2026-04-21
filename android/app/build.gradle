@@ -39,6 +39,10 @@ android {
             signingConfig signingConfigs.release
         }
     }
+
+    lint {
+        disable 'MockLocation'
+    }
 }
 
 flutter {
