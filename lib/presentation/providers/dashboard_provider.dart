@@ -118,8 +118,13 @@ class DashboardProvider extends ChangeNotifier {
       await _mockLocationService.start(next);
       session = next.copyWith(lastUpdateAt: DateTime.now());
       await _repository.saveLastSession(session!);
-      await _loadCachedLocationName(session!);
+      // Use search result name if available, otherwise load cached
+      if (_selectedLocationName == null) {
+        await _loadCachedLocationName(session!);
+      }
       await _recordHistory(session!);
+      // Clear the selected location name after recording
+      _selectedLocationName = null;
       infoMessage = 'Mock location active';
       _startDebugClockIfNeeded();
       unawaited(resolveCurrentLocationName());
@@ -273,9 +278,13 @@ class DashboardProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  String? _selectedLocationName;
+
   void applySearchResult(OSMSearchResult result) {
     searchResults = const [];
     _searchDebounce?.cancel();
+    _selectedLocationName = result.name;
+    currentLocationName = result.name;
     infoMessage = 'Selected: ${result.name}';
     notifyListeners();
   }
