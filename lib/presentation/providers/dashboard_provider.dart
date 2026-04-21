@@ -50,6 +50,8 @@ class DashboardProvider extends ChangeNotifier {
   final OpenStreetMapService _osmService = OpenStreetMapService();
 
   bool get hasSeenOnboarding => _repository.hasSeenOnboarding();
+  bool get hasAcceptedConsent => _repository.hasAcceptedConsent();
+  bool get allowPlacesSearch => _repository.allowPlacesSearch();
 
   Future<void> load() async {
     presets = _repository.loadPresets();
@@ -85,6 +87,17 @@ class DashboardProvider extends ChangeNotifier {
 
   Future<void> completeOnboarding() async {
     await _repository.setSeenOnboarding();
+    notifyListeners();
+  }
+
+  Future<void> saveConsent({
+    required bool acceptedSafety,
+    required bool allowSearch,
+  }) async {
+    await _repository.saveConsent(
+      acceptedSafety: acceptedSafety,
+      allowSearch: allowSearch,
+    );
     notifyListeners();
   }
 
@@ -250,6 +263,12 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   Future<void> searchLocation(String query) async {
+    if (!allowPlacesSearch) {
+      searchResults = const [];
+      infoMessage = 'Location search disabled in privacy settings.';
+      notifyListeners();
+      return;
+    }
     _searchDebounce?.cancel();
     if (query.trim().length < 2) {
       searchResults = const [];

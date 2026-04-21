@@ -10,6 +10,8 @@ class LocationRepository {
   static const _presetsKey = 'presets';
   static const _lastSessionKey = 'lastSession';
   static const _seenOnboardingKey = 'seenOnboarding';
+  static const _acceptedConsentKey = 'acceptedConsent';
+  static const _allowSearchKey = 'allowSearch';
 
   late final SharedPreferences _preferences;
 
@@ -111,4 +113,20 @@ class LocationRepository {
       isBuiltIn: true,
     ),
   ];
+
+  bool hasAcceptedConsent() {
+    return _preferences.getBool(_acceptedConsentKey) ?? false;
+  }
+
+  bool allowPlacesSearch() {
+    return _preferences.getBool(_allowSearchKey) ?? true;
+  }
+
+  Future<void> saveConsent({
+    required bool acceptedSafety,
+    required bool allowSearch,
+  }) async {
+    await _preferences.setBool(_acceptedConsentKey, acceptedSafety);
+    await _preferences.setBool(_allowSearchKey, allowSearch);
+  }
 }

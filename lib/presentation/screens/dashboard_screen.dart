@@ -10,6 +10,7 @@ import '../providers/dashboard_provider.dart';
 import '../widgets/debug_panel.dart';
 import '../widgets/location_name_display.dart';
 import '../widgets/status_pill.dart';
+import 'consent_screen.dart';
 import 'history_screen.dart';
 import 'onboarding_screen.dart';
 import 'presets_screen.dart';
@@ -40,7 +41,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _applySession(session);
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!provider.hasSeenOnboarding && mounted) {
+      if (!provider.hasAcceptedConsent && mounted) {
+        Navigator.pushNamed(context, ConsentScreen.routeName);
+      } else if (!provider.hasSeenOnboarding && mounted) {
         Navigator.pushNamed(context, OnboardingScreen.routeName);
       }
     });

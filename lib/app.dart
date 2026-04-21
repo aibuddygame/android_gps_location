@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'core/constants/app_constants.dart';
+import 'presentation/screens/consent_screen.dart';
 import 'presentation/screens/dashboard_screen.dart';
 import 'presentation/screens/history_screen.dart';
 import 'presentation/screens/onboarding_screen.dart';
@@ -37,6 +38,7 @@ class GpsLocationChangerApp extends StatelessWidget {
       ),
       routes: {
         '/': (_) => const DashboardScreen(),
+        ConsentScreen.routeName: (_) => const ConsentScreen(),
         HistoryScreen.routeName: (_) => const HistoryScreen(),
         OnboardingScreen.routeName: (_) => const OnboardingScreen(),
         PresetsScreen.routeName: (_) => const PresetsScreen(),
