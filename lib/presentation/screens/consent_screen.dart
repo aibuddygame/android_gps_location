@@ -118,13 +118,15 @@ class _ConsentScreenState extends State<ConsentScreen> {
                             color: Colors.transparent,
                             child: InkWell(
                               onTap: _acceptedSafety
-                                  ? () {
+                                  ? () async {
                                       final provider = context.read<DashboardProvider>();
-                                      provider.saveConsent(
+                                      await provider.saveConsent(
                                         acceptedSafety: _acceptedSafety,
                                         allowSearch: _allowSearch,
                                       );
-                                      Navigator.pop(context);
+                                      if (context.mounted) {
+                                        Navigator.pop(context);
+                                      }
                                     }
                                   : null,
                               borderRadius: BorderRadius.circular(16),

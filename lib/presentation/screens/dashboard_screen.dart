@@ -63,6 +63,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<DashboardProvider>();
     final active = provider.session?.isActive == true;
+    
+    // Check consent on every build (in case user just returned from consent screen)
+    if (!provider.hasAcceptedConsent) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !provider.hasAcceptedConsent) {
+          Navigator.pushNamed(context, ConsentScreen.routeName);
+        }
+      });
+    }
+    
     if (_latitude.text.isEmpty && provider.session != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _latitude.text.isEmpty) {
