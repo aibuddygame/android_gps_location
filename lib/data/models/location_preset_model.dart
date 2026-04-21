@@ -32,12 +32,12 @@ class LocationPresetModel extends LocationPreset {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'latitude': latitude,
-    'longitude': longitude,
-    'isBuiltIn': isBuiltIn,
-  };
+        'id': id,
+        'name': name,
+        'latitude': latitude,
+        'longitude': longitude,
+        'isBuiltIn': isBuiltIn,
+      };
 
   String encode() => jsonEncode(toJson());
 

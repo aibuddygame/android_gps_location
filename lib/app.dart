@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 import 'core/constants/app_constants.dart';
-import 'presentation/screens/dashboard_screen.dart';
-import 'presentation/screens/history_screen.dart';
-import 'presentation/screens/onboarding_screen.dart';
-import 'presentation/screens/presets_screen.dart';
+import 'core/theme/app_theme.dart';
+import 'presentation/screens/consent_screen.dart';
+import 'presentation/screens/home_screen.dart';
+import 'presentation/screens/settings_screen.dart';
 
 class GpsLocationChangerApp extends StatelessWidget {
   const GpsLocationChangerApp({super.key});
@@ -14,32 +14,11 @@ class GpsLocationChangerApp extends StatelessWidget {
     return MaterialApp(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF0B7A75),
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            minimumSize: const Size(96, 48),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        cardTheme: CardThemeData(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-      ),
+      theme: AppTheme.dark(),
       routes: {
-        '/': (_) => const DashboardScreen(),
-        HistoryScreen.routeName: (_) => const HistoryScreen(),
-        OnboardingScreen.routeName: (_) => const OnboardingScreen(),
-        PresetsScreen.routeName: (_) => const PresetsScreen(),
+        '/': (_) => const HomeScreen(),
+        ConsentScreen.routeName: (_) => const ConsentScreen(),
+        SettingsScreen.routeName: (_) => const SettingsScreen(),
       },
     );
   }
