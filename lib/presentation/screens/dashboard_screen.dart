@@ -120,6 +120,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: Colors.green.shade700,
               ),
             _SetupBanner(provider: provider),
+            // 1. Search Location (Primary)
             _SearchField(
               controller: _searchController,
               onChanged: provider.searchLocation,
@@ -135,19 +136,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 provider.clearSearch();
               },
             ),
-            if (provider.session != null) ...[
-              LocationNameDisplay(
-                latitude: provider.session!.latitude,
-                longitude: provider.session!.longitude,
-                locationName: provider.currentLocationName,
-                isLoading: provider.isResolvingLocationName,
+            // 2. Selected Place Name (Prominent)
+            if (provider.currentLocationName != null || provider.session != null)
+              _LocationDisplay(
+                name: provider.currentLocationName ?? 'Custom Location',
+                lat: double.tryParse(_latitude.text) ?? provider.session?.latitude ?? 0,
+                lng: double.tryParse(_longitude.text) ?? provider.session?.longitude ?? 0,
               ),
-              const SizedBox(height: 16),
-            ],
+            const SizedBox(height: 16),
+            // Hidden form fields for validation
             Form(
               key: _formKey,
               child: Column(
                 children: [
+                  // Hidden lat/lng fields
                   Row(
                     children: [
                       Expanded(
@@ -181,80 +183,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _accuracy,
-                          decoration: const InputDecoration(
-                            labelText: 'Accuracy m',
-                          ),
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          validator: (value) =>
-                              LocationValidator.validateNonNegative(
-                            value ?? '',
-                            'Accuracy',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _speed,
-                          decoration: const InputDecoration(
-                            labelText: 'Speed m/s',
-                          ),
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          validator: (value) =>
-                              LocationValidator.validateNonNegative(
-                            value ?? '',
-                            'Speed',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _bearing,
-                          decoration: const InputDecoration(
-                            labelText: 'Bearing deg',
-                          ),
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          validator: (value) =>
-                              LocationValidator.validateNonNegative(
-                            value ?? '',
-                            'Bearing',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _interval,
-                          decoration: const InputDecoration(
-                            labelText: 'Interval ms',
-                          ),
-                          keyboardType: TextInputType.number,
-                          validator: (value) =>
-                              LocationValidator.validateInterval(
-                            value ?? '',
-                            AppConstants.minIntervalMs,
-                            AppConstants.maxIntervalMs,
-                          ),
-                        ),
-                      ),
-                    ],
+                  // Advanced parameters (hidden by default)
+                  _AdvancedParameters(
+                    accuracyController: _accuracy,
+                    speedController: _speed,
+                    bearingController: _bearing,
+                    intervalController: _interval,
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -499,6 +433,164 @@ class _SearchField extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 16),
+      ],
+    );
+  }
+}
+
+class _LocationDisplay extends StatelessWidget {
+  const _LocationDisplay({
+    required this.name,
+    required this.lat,
+    required this.lng,
+  });
+
+  final String name;
+  final double lat;
+  final double lng;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Selected Location',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Colors.grey,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              name,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
+                    fontFamily: 'monospace',
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AdvancedParameters extends StatefulWidget {
+  const _AdvancedParameters({
+    required this.accuracyController,
+    required this.speedController,
+    required this.bearingController,
+    required this.intervalController,
+  });
+
+  final TextEditingController accuracyController;
+  final TextEditingController speedController;
+  final TextEditingController bearingController;
+  final TextEditingController intervalController;
+
+  @override
+  State<_AdvancedParameters> createState() => _AdvancedParametersState();
+}
+
+class _AdvancedParametersState extends State<_AdvancedParameters> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TextButton.icon(
+          onPressed: () => setState(() => _expanded = !_expanded),
+          icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+          label: Text(_expanded ? 'Hide advanced' : 'Advanced parameters'),
+        ),
+        if (_expanded) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: widget.accuracyController,
+                  decoration: const InputDecoration(
+                    labelText: 'Accuracy m',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  validator: (value) =>
+                      LocationValidator.validateNonNegative(
+                    value ?? '',
+                    'Accuracy',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  controller: widget.speedController,
+                  decoration: const InputDecoration(
+                    labelText: 'Speed m/s',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  validator: (value) =>
+                      LocationValidator.validateNonNegative(
+                    value ?? '',
+                    'Speed',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: widget.bearingController,
+                  decoration: const InputDecoration(
+                    labelText: 'Bearing deg',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  validator: (value) =>
+                      LocationValidator.validateNonNegative(
+                    value ?? '',
+                    'Bearing',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  controller: widget.intervalController,
+                  decoration: const InputDecoration(
+                    labelText: 'Interval ms',
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) =>
+                      LocationValidator.validateInterval(
+                    value ?? '',
+                    AppConstants.minIntervalMs,
+                    AppConstants.maxIntervalMs,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
