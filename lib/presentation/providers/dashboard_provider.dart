@@ -31,10 +31,8 @@ class DashboardProvider extends ChangeNotifier {
   final MockLocationService _mockLocationService;
   final GeocodingService _geocodingService;
   final PermissionHandler _permissionHandler;
-  final OpenStreetMapService _osmService = OpenStreetMapService();
   final BuildMockLocationSession _buildSession =
       const BuildMockLocationSession();
-  Timer? _searchDebounce;
 
   List<LocationPreset> presets = const [];
   List<LocationHistoryModel> history = const [];
@@ -48,6 +46,8 @@ class DashboardProvider extends ChangeNotifier {
   String? infoMessage;
   String? currentLocationName;
   Timer? _debugTimer;
+  Timer? _searchDebounce;
+  final OpenStreetMapService _osmService = OpenStreetMapService();
 
   bool get hasSeenOnboarding => _repository.hasSeenOnboarding();
 
@@ -251,12 +251,10 @@ class DashboardProvider extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    
     _searchDebounce = Timer(const Duration(milliseconds: 500), () async {
       isSearching = true;
       errorMessage = null;
       notifyListeners();
-      
       try {
         searchResults = await _osmService.search(query);
       } catch (e) {

@@ -479,7 +479,9 @@ class _SearchField extends StatelessWidget {
                   dense: true,
                   title: Text(result.name),
                   subtitle: Text(
-                    '${result.displayName.substring(0, result.displayName.length > 50 ? 50 : result.displayName.length)}...',
+                    result.displayName.length > 50
+                        ? '${result.displayName.substring(0, 50)}...'
+                        : result.displayName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

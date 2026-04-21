@@ -12,8 +12,8 @@ class PermissionHandler {
   Future<PermissionStatusSnapshot> check() async {
     final serviceEnabled = await geo.Geolocator.isLocationServiceEnabled();
     final permission = await geo.Geolocator.checkPermission();
-    final mockLocationEnabled =
-        await _mockLocationService.isMockLocationEnabled();
+    final mockLocationEnabled = await _mockLocationService
+        .isMockLocationEnabled();
     return PermissionStatusSnapshot(
       locationServiceEnabled: serviceEnabled,
       locationPermission: permission,

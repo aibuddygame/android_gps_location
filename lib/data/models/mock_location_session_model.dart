@@ -51,17 +51,17 @@ class MockLocationSessionModel extends MockLocationSession {
   }
 
   Map<String, dynamic> toJson() => {
-        'latitude': latitude,
-        'longitude': longitude,
-        'accuracy': accuracy,
-        'speed': speed,
-        'bearing': bearing,
-        'intervalMs': intervalMs,
-        'startedAt': startedAt?.toIso8601String(),
-        'lastUpdateAt': lastUpdateAt?.toIso8601String(),
-        'isActive': isActive,
-        'isBackgroundCapable': isBackgroundCapable,
-      };
+    'latitude': latitude,
+    'longitude': longitude,
+    'accuracy': accuracy,
+    'speed': speed,
+    'bearing': bearing,
+    'intervalMs': intervalMs,
+    'startedAt': startedAt?.toIso8601String(),
+    'lastUpdateAt': lastUpdateAt?.toIso8601String(),
+    'isActive': isActive,
+    'isBackgroundCapable': isBackgroundCapable,
+  };
 
   String encode() => jsonEncode(toJson());
 

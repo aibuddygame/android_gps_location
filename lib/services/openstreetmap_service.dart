@@ -9,7 +9,6 @@ class OpenStreetMapService {
   OpenStreetMapService({http.Client? client}) : _client = client ?? http.Client();
   
   /// Search for locations by query string
-  /// Returns list of search results with name, display name, lat, and lon
   Future<List<OSMSearchResult>> search(String query, {int limit = 5}) async {
     if (query.trim().length < 2) return [];
     
@@ -44,38 +43,6 @@ class OpenStreetMapService {
     }
   }
   
-  /// Reverse geocode - get location name from coordinates
-  Future<OSMSearchResult?> reverseGeocode(double lat, double lon) async {
-    final uri = Uri.https(
-      'nominatim.openstreetmap.org',
-      '/reverse',
-      {
-        'lat': lat.toString(),
-        'lon': lon.toString(),
-        'format': 'json',
-      },
-    );
-    
-    try {
-      final response = await _client.get(
-        uri,
-        headers: {
-          'User-Agent': 'GPSLocationChanger/1.0',
-          'Accept': 'application/json',
-        },
-      );
-      
-      if (response.statusCode != 200) return null;
-      
-      final data = json.decode(response.body);
-      if (data['error'] != null) return null;
-      
-      return OSMSearchResult.fromJson(data);
-    } catch (e) {
-      return null;
-    }
-  }
-  
   void dispose() {
     _client.close();
   }
@@ -87,16 +54,12 @@ class OSMSearchResult {
   final String displayName;
   final double lat;
   final double lon;
-  final String? type;
-  final String? category;
   
   OSMSearchResult({
     required this.name,
     required this.displayName,
     required this.lat,
     required this.lon,
-    this.type,
-    this.category,
   });
   
   factory OSMSearchResult.fromJson(Map<String, dynamic> json) {
@@ -105,11 +68,6 @@ class OSMSearchResult {
       displayName: json['display_name'] ?? '',
       lat: double.tryParse(json['lat']?.toString() ?? '0') ?? 0,
       lon: double.tryParse(json['lon']?.toString() ?? '0') ?? 0,
-      type: json['type'],
-      category: json['category'],
     );
   }
-  
-  @override
-  String toString() => '$name ($lat, $lon)';
 }
