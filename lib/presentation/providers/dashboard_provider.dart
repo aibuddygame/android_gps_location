@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart' as geo;
 
 import '../../core/constants/app_constants.dart';
 import '../../data/models/location_history_model.dart';
@@ -69,6 +70,31 @@ class DashboardProvider extends ChangeNotifier {
   Future<void> refreshChecks() async {
     permissionStatus = await _permissionHandler.check();
     notifyListeners();
+  }
+
+  Future<MockLocationSession?> getCurrentDeviceLocation() async {
+    try {
+      final permission = await geo.Geolocator.checkPermission();
+      if (permission == geo.LocationPermission.denied ||
+          permission == geo.LocationPermission.deniedForever) {
+        return null;
+      }
+      
+      final position = await geo.Geolocator.getCurrentPosition(
+        desiredAccuracy: geo.LocationAccuracy.best,
+      );
+      
+      return MockLocationSession(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        accuracy: position.accuracy,
+        speed: position.speed,
+        bearing: position.heading,
+        intervalMs: AppConstants.defaultIntervalMs,
+      );
+    } catch (e) {
+      return null;
+    }
   }
 
   Future<void> requestPermission() async {

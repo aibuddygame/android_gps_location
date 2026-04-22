@@ -41,6 +41,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (session != null && _latitude.text.isEmpty) {
       _applySession(session);
     }
+    // Get current device location if no session exists
+    if (session == null && _latitude.text.isEmpty) {
+      _loadCurrentLocation();
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_consentChecked && mounted) {
         _consentChecked = true;
@@ -51,6 +55,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       }
     });
+  }
+
+  Future<void> _loadCurrentLocation() async {
+    final provider = context.read<DashboardProvider>();
+    final location = await provider.getCurrentDeviceLocation();
+    if (location != null && mounted) {
+      setState(() {
+        _latitude.text = location.latitude.toStringAsFixed(7);
+        _longitude.text = location.longitude.toStringAsFixed(7);
+        _accuracy.text = location.accuracy.toStringAsFixed(1);
+        _speed.text = location.speed.toStringAsFixed(1);
+        _bearing.text = location.bearing.toStringAsFixed(1);
+      });
+      // Resolve location name
+      provider.persistDraft(location);
+    }
   }
 
   @override
@@ -304,15 +324,21 @@ class _StatusCard extends StatelessWidget {
         gradient: active
             ? LinearGradient(
                 colors: [
-                  AppTheme.green.withOpacity(0.2),
-                  AppTheme.cyan.withOpacity(0.1),
+                  AppTheme.green.withOpacity(0.15),
+                  AppTheme.cyan.withOpacity(0.05),
                 ],
               )
-            : null,
-        color: active ? null : AppTheme.surface,
+            : LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppTheme.white.withOpacity(0.08),
+                  AppTheme.white.withOpacity(0.02),
+                ],
+              ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: active ? AppTheme.green.withOpacity(0.5) : AppTheme.greyDark,
+          color: active ? AppTheme.green.withOpacity(0.5) : AppTheme.white.withOpacity(0.15),
           width: 1,
         ),
       ),
@@ -423,12 +449,26 @@ class _TwoStepSearchState extends State<_TwoStepSearch> {
       children: [
         // Step 1: Region/City Selection
         if (widget.selectedRegion == null) ...[
-          Text(
-            'Step 1: Select Country or City',
-            style: TextStyle(
-              color: AppTheme.grey.withOpacity(0.8),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+          RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: 'Step 1: ',
+                  style: TextStyle(
+                    color: AppTheme.cyan,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                TextSpan(
+                  text: 'Select Country or City',
+                  style: TextStyle(
+                    color: AppTheme.grey.withOpacity(0.8),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 8),
@@ -573,12 +613,26 @@ class _TwoStepSearchState extends State<_TwoStepSearch> {
           ),
           const SizedBox(height: 16),
           // Step 2: Location Search
-          Text(
-            'Step 2: Search Specific Location',
-            style: TextStyle(
-              color: AppTheme.grey.withOpacity(0.8),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+          RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: 'Step 2: ',
+                  style: TextStyle(
+                    color: AppTheme.purple,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                TextSpan(
+                  text: 'Search Specific Location',
+                  style: TextStyle(
+                    color: AppTheme.grey.withOpacity(0.8),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 8),
