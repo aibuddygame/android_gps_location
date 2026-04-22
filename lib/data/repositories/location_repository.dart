@@ -83,36 +83,7 @@ class LocationRepository {
     await _preferences.setBool(_seenOnboardingKey, true);
   }
 
-  static const builtInPresets = [
-    LocationPreset(
-      id: 'builtin-home',
-      name: 'Home',
-      latitude: 37.4219999,
-      longitude: -122.0840575,
-      isBuiltIn: true,
-    ),
-    LocationPreset(
-      id: 'builtin-office',
-      name: 'Office',
-      latitude: 37.33182,
-      longitude: -122.03118,
-      isBuiltIn: true,
-    ),
-    LocationPreset(
-      id: 'builtin-tokyo-station',
-      name: 'Tokyo Station',
-      latitude: 35.681236,
-      longitude: 139.767125,
-      isBuiltIn: true,
-    ),
-    LocationPreset(
-      id: 'builtin-shibuya',
-      name: 'Shibuya',
-      latitude: 35.65952,
-      longitude: 139.70055,
-      isBuiltIn: true,
-    ),
-  ];
+  static const builtInPresets = <LocationPreset>[];
 
   bool hasAcceptedConsent() {
     return _preferences.getBool(_acceptedConsentKey) ?? false;
