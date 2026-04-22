@@ -424,6 +424,7 @@ class _TwoStepSearch extends StatefulWidget {
 
 class _TwoStepSearchState extends State<_TwoStepSearch> {
   bool _showRegionSuggestions = false;
+  bool _showPopularLocations = true;
 
   final List<String> _commonRegions = [
     'Tokyo, Japan',
@@ -442,6 +443,52 @@ class _TwoStepSearchState extends State<_TwoStepSearch> {
     'Dubai, UAE',
     'Mumbai, India',
   ];
+
+  // Popular locations by region
+  final Map<String, List<String>> _popularLocations = {
+    'Tokyo, Japan': ['Shibuya Crossing', 'Tokyo Station', 'Shinjuku', 'Asakusa', 'Akihabara', 'Roppongi', 'Ginza'],
+    'Japan': ['Shibuya Crossing', 'Tokyo Station', 'Shinjuku', 'Asakusa', 'Akihabara', 'Roppongi', 'Ginza', 'Kyoto Station', 'Osaka Castle'],
+    'New York, USA': ['Times Square', 'Central Park', 'Empire State Building', 'Brooklyn Bridge', 'Statue of Liberty', 'Grand Central Terminal'],
+    'USA': ['Times Square', 'Central Park', 'Golden Gate Bridge', 'Hollywood Sign', 'Las Vegas Strip', 'White House'],
+    'London, UK': ['Big Ben', 'London Eye', 'Tower Bridge', 'Buckingham Palace', 'Trafalgar Square', 'Hyde Park'],
+    'UK': ['Big Ben', 'London Eye', 'Edinburgh Castle', 'Stonehenge', 'Buckingham Palace', 'Tower of London'],
+    'Paris, France': ['Eiffel Tower', 'Louvre Museum', 'Notre-Dame', 'Arc de Triomphe', 'Champs-Élysées', 'Sacré-Cœur'],
+    'France': ['Eiffel Tower', 'Louvre Museum', 'Notre-Dame', 'Arc de Triomphe', 'Palace of Versailles'],
+    'Berlin, Germany': ['Brandenburg Gate', 'Berlin Wall', 'Reichstag', 'Checkpoint Charlie', 'Museum Island'],
+    'Germany': ['Brandenburg Gate', 'Neuschwanstein Castle', 'Cologne Cathedral', 'Reichstag'],
+    'Sydney, Australia': ['Sydney Opera House', 'Harbour Bridge', 'Bondi Beach', 'Darling Harbour', 'Circular Quay'],
+    'Australia': ['Sydney Opera House', 'Great Barrier Reef', 'Uluru', 'Melbourne CBD'],
+    'Singapore': ['Marina Bay Sands', 'Gardens by the Bay', 'Sentosa', 'Orchard Road', 'Chinatown', 'Clarke Quay'],
+    'Hong Kong': ['Victoria Peak', 'Tsim Sha Tsui', 'Central', 'Mong Kok', 'Causeway Bay', 'Lan Kwai Fong'],
+    'Toronto, Canada': ['CN Tower', 'Niagara Falls', 'Royal Ontario Museum', 'Distillery District', 'High Park'],
+    'Canada': ['CN Tower', 'Niagara Falls', 'Banff National Park', 'Old Quebec'],
+    'Los Angeles, USA': ['Hollywood Sign', 'Santa Monica Pier', 'Griffith Observatory', 'Venice Beach', 'Universal Studios'],
+    'San Francisco, USA': ['Golden Gate Bridge', 'Alcatraz', 'Fisherman\'s Wharf', 'Lombard Street', 'Union Square'],
+    'Seoul, South Korea': ['Gangnam', 'Myeongdong', 'Gyeongbokgung', 'Hongdae', 'Dongdaemun', 'Itaewon'],
+    'South Korea': ['Gangnam', 'Myeongdong', 'Gyeongbokgung', 'N Seoul Tower', 'Bukchon Hanok Village'],
+    'Bangkok, Thailand': ['Grand Palace', 'Wat Arun', 'Khao San Road', 'Chatuchak Market', 'Siam Paragon'],
+    'Thailand': ['Grand Palace', 'Wat Arun', 'Phuket', 'Chiang Mai', 'Koh Samui'],
+    'Dubai, UAE': ['Burj Khalifa', 'Dubai Mall', 'Palm Jumeirah', 'Burj Al Arab', 'Dubai Marina'],
+    'UAE': ['Burj Khalifa', 'Dubai Mall', 'Sheikh Zayed Mosque', 'Palm Jumeirah'],
+    'Mumbai, India': ['Gateway of India', 'Marine Drive', 'Colaba', 'Bandra Worli Sea Link', 'Juhu Beach'],
+    'India': ['Taj Mahal', 'Gateway of India', 'Red Fort', 'India Gate', 'Golden Temple'],
+  };
+
+  List<String> _getPopularLocationsForRegion(String region) {
+    // Try exact match first
+    if (_popularLocations.containsKey(region)) {
+      return _popularLocations[region]!;
+    }
+    // Try to match by country name only
+    for (final key in _popularLocations.keys) {
+      if (key.toLowerCase().contains(region.toLowerCase()) ||
+          region.toLowerCase().contains(key.toLowerCase())) {
+        return _popularLocations[key]!;
+      }
+    }
+    // Return generic popular locations
+    return ['City Center', 'Main Station', 'Airport', 'Downtown', 'Shopping District', 'Business District'];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -648,10 +695,14 @@ class _TwoStepSearchState extends State<_TwoStepSearch> {
             ),
             child: TextField(
               controller: widget.locationController,
-              onChanged: widget.onSearch,
+              onChanged: (value) {
+                widget.onSearch(value);
+                setState(() => _showPopularLocations = value.isEmpty);
+              },
+              onTap: () => setState(() => _showPopularLocations = widget.locationController.text.isEmpty),
               style: const TextStyle(color: AppTheme.white),
               decoration: InputDecoration(
-                hintText: 'e.g., "Shibuya Station" or "Central Park"',
+                hintText: 'Try "${_getPopularLocationsForRegion(widget.selectedRegion!).first}" or search...',
                 hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.7)),
                 prefixIcon: const Icon(Icons.search, color: AppTheme.purple),
                 suffixIcon: widget.isSearching
@@ -668,7 +719,10 @@ class _TwoStepSearchState extends State<_TwoStepSearch> {
                     : widget.locationController.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear, color: AppTheme.grey),
-                            onPressed: widget.onLocationCleared,
+                            onPressed: () {
+                              widget.onLocationCleared();
+                              setState(() => _showPopularLocations = true);
+                            },
                           )
                         : null,
                 border: InputBorder.none,
@@ -677,6 +731,60 @@ class _TwoStepSearchState extends State<_TwoStepSearch> {
                   vertical: 18,
                 ),
               ),
+            ),
+          ),
+        ],
+        // Popular locations suggestion
+        if (widget.selectedRegion != null && _showPopularLocations && widget.results.isEmpty) ...[
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppTheme.purple.withOpacity(0.2),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Row(
+                    children: [
+                      Icon(Icons.trending_up, color: AppTheme.purple.withOpacity(0.7), size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Popular in ${widget.selectedRegion}',
+                        style: TextStyle(
+                          color: AppTheme.purple.withOpacity(0.8),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _getPopularLocationsForRegion(widget.selectedRegion!).map((location) {
+                    return ActionChip(
+                      avatar: const Icon(Icons.place, size: 16, color: AppTheme.grey),
+                      label: Text(location),
+                      labelStyle: const TextStyle(color: AppTheme.white, fontSize: 13),
+                      backgroundColor: AppTheme.surfaceLight,
+                      side: BorderSide(color: AppTheme.greyDark),
+                      onPressed: () {
+                        widget.locationController.text = location;
+                        widget.onSearch(location);
+                        setState(() => _showPopularLocations = false);
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 12),
+              ],
             ),
           ),
         ],
