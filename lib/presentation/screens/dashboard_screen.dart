@@ -28,8 +28,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _speed = TextEditingController();
   final _bearing = TextEditingController();
   final _interval = TextEditingController();
-  final _searchController = TextEditingController();
+  final _regionController = TextEditingController();
+  final _locationController = TextEditingController();
   bool _consentChecked = false;
+  String? _selectedRegion;
 
   @override
   void didChangeDependencies() {
@@ -59,7 +61,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _speed.dispose();
     _bearing.dispose();
     _interval.dispose();
-    _searchController.dispose();
+    _regionController.dispose();
+    _locationController.dispose();
     super.dispose();
   }
 
@@ -120,20 +123,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
               // Status Card
               _StatusCard(active: active),
               const SizedBox(height: 24),
-              // Search
-              _SearchField(
-                controller: _searchController,
-                onChanged: provider.searchLocation,
+              // Two-Step Search
+              _TwoStepSearch(
+                regionController: _regionController,
+                locationController: _locationController,
+                selectedRegion: _selectedRegion,
+                onRegionSelected: (region) {
+                  setState(() => _selectedRegion = region);
+                },
+                onRegionCleared: () {
+                  setState(() => _selectedRegion = null);
+                  _regionController.clear();
+                },
+                onLocationCleared: () {
+                  _locationController.clear();
+                  provider.clearSearch();
+                },
                 isSearching: provider.isSearching,
                 results: provider.searchResults,
+                onSearch: (query) {
+                  final searchQuery = _selectedRegion != null
+                      ? '$query, $_selectedRegion'
+                      : query;
+                  provider.searchLocation(searchQuery);
+                },
                 onResultSelected: (result) {
                   _latitude.text = result.lat.toString();
                   _longitude.text = result.lon.toString();
                   provider.applySearchResult(result);
-                },
-                onClear: () {
-                  _searchController.clear();
-                  provider.clearSearch();
                 },
               ),
               const SizedBox(height: 20),
@@ -349,71 +366,267 @@ class _StatusCard extends StatelessWidget {
   }
 }
 
-class _SearchField extends StatelessWidget {
-  const _SearchField({
-    required this.controller,
-    required this.onChanged,
+class _TwoStepSearch extends StatefulWidget {
+  const _TwoStepSearch({
+    required this.regionController,
+    required this.locationController,
+    required this.selectedRegion,
+    required this.onRegionSelected,
+    required this.onRegionCleared,
+    required this.onLocationCleared,
     required this.isSearching,
     required this.results,
+    required this.onSearch,
     required this.onResultSelected,
-    required this.onClear,
   });
 
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
+  final TextEditingController regionController;
+  final TextEditingController locationController;
+  final String? selectedRegion;
+  final ValueChanged<String> onRegionSelected;
+  final VoidCallback onRegionCleared;
+  final VoidCallback onLocationCleared;
   final bool isSearching;
   final List<OSMSearchResult> results;
+  final ValueChanged<String> onSearch;
   final ValueChanged<OSMSearchResult> onResultSelected;
-  final VoidCallback onClear;
+
+  @override
+  State<_TwoStepSearch> createState() => _TwoStepSearchState();
+}
+
+class _TwoStepSearchState extends State<_TwoStepSearch> {
+  bool _showRegionSuggestions = false;
+
+  final List<String> _commonRegions = [
+    'Tokyo, Japan',
+    'New York, USA',
+    'London, UK',
+    'Paris, France',
+    'Berlin, Germany',
+    'Sydney, Australia',
+    'Singapore',
+    'Hong Kong',
+    'Toronto, Canada',
+    'Los Angeles, USA',
+    'San Francisco, USA',
+    'Seoul, South Korea',
+    'Bangkok, Thailand',
+    'Dubai, UAE',
+    'Mumbai, India',
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceLight,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppTheme.cyan.withOpacity(0.3),
-              width: 1,
+        // Step 1: Region/City Selection
+        if (widget.selectedRegion == null) ...[
+          Text(
+            'Step 1: Select Country or City',
+            style: TextStyle(
+              color: AppTheme.grey.withOpacity(0.8),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
             ),
           ),
-          child: TextField(
-            controller: controller,
-            onChanged: onChanged,
-            style: const TextStyle(color: AppTheme.white),
-            decoration: InputDecoration(
-              hintText: 'Try: "Tokyo, Japan" or "Central Park, New York"',
-              hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.7)),
-              prefixIcon: const Icon(Icons.search, color: AppTheme.cyan),
-              suffixIcon: isSearching
-                  ? const Padding(
-                      padding: EdgeInsets.all(14),
-                      child: SizedBox.square(
-                        dimension: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(AppTheme.cyan),
-                        ),
-                      ),
-                    )
-                  : controller.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, color: AppTheme.grey),
-                          onPressed: onClear,
-                        )
-                      : null,
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 18,
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceLight,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppTheme.cyan.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: TextField(
+              controller: widget.regionController,
+              onChanged: (value) {
+                setState(() => _showRegionSuggestions = value.length >= 2);
+              },
+              onSubmitted: (value) {
+                if (value.trim().isNotEmpty) {
+                  widget.onRegionSelected(value.trim());
+                }
+              },
+              style: const TextStyle(color: AppTheme.white),
+              decoration: InputDecoration(
+                hintText: 'e.g., "Tokyo, Japan" or "New York"',
+                hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.7)),
+                prefixIcon: const Icon(Icons.location_city, color: AppTheme.cyan),
+                suffixIcon: widget.regionController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: AppTheme.grey),
+                        onPressed: () {
+                          widget.regionController.clear();
+                          setState(() => _showRegionSuggestions = false);
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 18,
+                ),
               ),
             ),
           ),
-        ),
-        if (results.isNotEmpty) ...[
+          // Region suggestions
+          if (_showRegionSuggestions) ...[
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppTheme.cyan.withOpacity(0.2),
+                ),
+              ),
+              child: ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _commonRegions
+                    .where((r) => r.toLowerCase().contains(
+                          widget.regionController.text.toLowerCase(),
+                        ))
+                    .take(5)
+                    .length,
+                itemBuilder: (context, index) {
+                  final matches = _commonRegions
+                      .where((r) => r.toLowerCase().contains(
+                            widget.regionController.text.toLowerCase(),
+                          ))
+                      .take(5)
+                      .toList();
+                  final region = matches[index];
+                  return ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.location_on, color: AppTheme.cyan, size: 20),
+                    title: Text(
+                      region,
+                      style: const TextStyle(
+                        color: AppTheme.white,
+                        fontSize: 14,
+                      ),
+                    ),
+                    onTap: () {
+                      widget.regionController.text = region;
+                      widget.onRegionSelected(region);
+                      setState(() => _showRegionSuggestions = false);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ] else ...[
+          // Selected region display
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppTheme.cyan.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppTheme.cyan.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, color: AppTheme.cyan, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Searching in:',
+                        style: TextStyle(
+                          color: AppTheme.grey.withOpacity(0.8),
+                          fontSize: 11,
+                        ),
+                      ),
+                      Text(
+                        widget.selectedRegion!,
+                        style: const TextStyle(
+                          color: AppTheme.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: widget.onRegionCleared,
+                  icon: const Icon(Icons.edit, size: 16),
+                  label: const Text('Change'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.cyan,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Step 2: Location Search
+          Text(
+            'Step 2: Search Specific Location',
+            style: TextStyle(
+              color: AppTheme.grey.withOpacity(0.8),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceLight,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppTheme.purple.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: TextField(
+              controller: widget.locationController,
+              onChanged: widget.onSearch,
+              style: const TextStyle(color: AppTheme.white),
+              decoration: InputDecoration(
+                hintText: 'e.g., "Shibuya Station" or "Central Park"',
+                hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.7)),
+                prefixIcon: const Icon(Icons.search, color: AppTheme.purple),
+                suffixIcon: widget.isSearching
+                    ? const Padding(
+                        padding: EdgeInsets.all(14),
+                        child: SizedBox.square(
+                          dimension: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(AppTheme.purple),
+                          ),
+                        ),
+                      )
+                    : widget.locationController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, color: AppTheme.grey),
+                            onPressed: widget.onLocationCleared,
+                          )
+                        : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 18,
+                ),
+              ),
+            ),
+          ),
+        ],
+        // Search results
+        if (widget.results.isNotEmpty) ...[
           const SizedBox(height: 12),
           Container(
             decoration: BoxDecoration(
@@ -426,13 +639,13 @@ class _SearchField extends StatelessWidget {
             child: ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: results.length,
+              itemCount: widget.results.length,
               separatorBuilder: (_, __) => Divider(
                 height: 1,
                 color: AppTheme.greyDark.withOpacity(0.5),
               ),
               itemBuilder: (context, index) {
-                final result = results[index];
+                final result = widget.results[index];
                 return ListTile(
                   dense: true,
                   title: Text(
@@ -443,8 +656,8 @@ class _SearchField extends StatelessWidget {
                     ),
                   ),
                   subtitle: Text(
-                    result.displayName.length > 40
-                        ? '${result.displayName.substring(0, 40)}...'
+                    result.displayName.length > 50
+                        ? '${result.displayName.substring(0, 50)}...'
                         : result.displayName,
                     style: const TextStyle(color: AppTheme.grey, fontSize: 12),
                     maxLines: 1,
@@ -460,7 +673,7 @@ class _SearchField extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '${result.lat.toStringAsFixed(3)}, ${result.lon.toStringAsFixed(3)}',
+                      '${result.lat.toStringAsFixed(4)}, ${result.lon.toStringAsFixed(4)}',
                       style: const TextStyle(
                         color: AppTheme.cyan,
                         fontSize: 11,
@@ -468,7 +681,7 @@ class _SearchField extends StatelessWidget {
                       ),
                     ),
                   ),
-                  onTap: () => onResultSelected(result),
+                  onTap: () => widget.onResultSelected(result),
                 );
               },
             ),
