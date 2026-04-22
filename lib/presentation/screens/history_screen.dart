@@ -194,6 +194,11 @@ class _HistoryTileState extends State<_HistoryTile> {
                   },
                   icon: const Icon(Icons.edit_outlined),
                 ),
+                IconButton(
+                  tooltip: 'Save to preset',
+                  onPressed: () => _saveToPreset(context),
+                  icon: const Icon(Icons.bookmark_add_outlined),
+                ),
                 const Padding(
                   padding: EdgeInsets.only(top: 8),
                   child: Icon(Icons.north_west),
@@ -225,5 +230,58 @@ class _HistoryTileState extends State<_HistoryTile> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  Future<void> _saveToPreset(BuildContext context) async {
+    final provider = context.read<DashboardProvider>();
+    final nameController = TextEditingController(
+      text: item.locationName ?? item.coordinates,
+    );
+    
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Save to Preset'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Save this location to your presets?'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Preset name',
+                hintText: 'Enter a name for this preset',
+              ),
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed == true && nameController.text.trim().isNotEmpty) {
+      await provider.savePreset(
+        name: nameController.text.trim(),
+        latitude: item.latitude,
+        longitude: item.longitude,
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Saved to presets')),
+        );
+      }
+    }
+    nameController.dispose();
   }
 }
