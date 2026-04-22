@@ -1,7 +1,7 @@
 class AppConstants {
   const AppConstants._();
 
-  static const appName = 'GPS Location Changer';
+  static const appName = 'GPS Fake';
   static const defaultIntervalMs = 1000;
   static const defaultAccuracyMeters = 5.0;
   static const minIntervalMs = 250;

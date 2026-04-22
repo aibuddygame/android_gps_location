@@ -150,18 +150,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 key: _formKey,
                 child: Column(
                   children: [
+                    // Editable Coordinates
                     Row(
                       children: [
                         Expanded(
-                          child: _HiddenTextField(
+                          child: _CoordinateField(
                             controller: _latitude,
+                            label: 'Latitude',
                             validator: (v) => LocationValidator.validateLatitude(v ?? ''),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _HiddenTextField(
+                          child: _CoordinateField(
                             controller: _longitude,
+                            label: 'Longitude',
                             validator: (v) => LocationValidator.validateLongitude(v ?? ''),
                           ),
                         ),
@@ -382,7 +385,7 @@ class _SearchField extends StatelessWidget {
             onChanged: onChanged,
             style: const TextStyle(color: AppTheme.white),
             decoration: InputDecoration(
-              hintText: 'Search location...',
+              hintText: 'Try: "Tokyo, Japan" or "Central Park, New York"',
               hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.7)),
               prefixIcon: const Icon(Icons.search, color: AppTheme.cyan),
               suffixIcon: isSearching
@@ -580,6 +583,68 @@ class _HiddenTextField extends StatelessWidget {
           validator: validator,
         ),
       ),
+    );
+  }
+}
+
+class _CoordinateField extends StatelessWidget {
+  const _CoordinateField({
+    required this.controller,
+    required this.label,
+    required this.validator,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final String? Function(String?) validator;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: AppTheme.grey.withOpacity(0.8),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceLight,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppTheme.cyan.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: TextFormField(
+            controller: controller,
+            validator: validator,
+            style: const TextStyle(
+              color: AppTheme.white,
+              fontFamily: 'monospace',
+              fontSize: 14,
+            ),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+            decoration: InputDecoration(
+              hintText: label == 'Latitude' ? '35.6762' : '139.6503',
+              hintStyle: TextStyle(
+                color: AppTheme.grey.withOpacity(0.4),
+                fontFamily: 'monospace',
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
