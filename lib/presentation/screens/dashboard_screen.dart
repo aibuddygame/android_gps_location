@@ -68,8 +68,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _speed.text = location.speed.toStringAsFixed(1);
         _bearing.text = location.bearing.toStringAsFixed(1);
       });
-      // Resolve location name
-      provider.persistDraft(location);
+      // Set as current location
+      provider.persistDraft(location, locationName: 'Current Location');
     }
   }
 
@@ -176,9 +176,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 20),
               // Location Display
-              if (provider.currentLocationName != null || provider.session != null)
+              if (provider.currentLocationName != null || provider.session != null || _latitude.text.isNotEmpty)
                 _LocationCard(
-                  name: provider.currentLocationName ?? 'Custom Location',
+                  name: provider.currentLocationName ?? 'Current Location',
                   lat: double.tryParse(_latitude.text) ?? provider.session?.latitude ?? 0,
                   lng: double.tryParse(_longitude.text) ?? provider.session?.longitude ?? 0,
                 ),

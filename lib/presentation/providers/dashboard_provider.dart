@@ -205,12 +205,18 @@ class DashboardProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> persistDraft(MockLocationSession draft) async {
+  Future<void> persistDraft(MockLocationSession draft, {String? locationName}) async {
     session = draft;
     await _repository.saveLastSession(draft);
-    await _loadCachedLocationName(draft);
+    if (locationName != null) {
+      currentLocationName = locationName;
+    } else {
+      await _loadCachedLocationName(draft);
+    }
     notifyListeners();
-    unawaited(resolveCurrentLocationName());
+    if (locationName == null) {
+      unawaited(resolveCurrentLocationName());
+    }
   }
 
   Future<void> refreshHistory() async {
