@@ -52,6 +52,102 @@ class OnboardingScreen extends StatelessWidget {
             },
             child: const Text('Done'),
           ),
+          const SizedBox(height: 24),
+          // Policy Links
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton(
+                onPressed: () => _showPrivacyPolicy(context),
+                child: const Text('Privacy Policy'),
+              ),
+              const Text('•', style: TextStyle(color: Colors.grey)),
+              TextButton(
+                onPressed: () => _showTermsOfService(context),
+                child: const Text('Terms of Service'),
+              ),
+              const Text('•', style: TextStyle(color: Colors.grey)),
+              TextButton(
+                onPressed: () => _showSafetyNotice(context),
+                child: const Text('Safety'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacyPolicy(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Privacy Policy'),
+        content: const SingleChildScrollView(
+          child: Text(
+            'GPS Fake processes all data locally on your device. '
+            'Location searches use OpenStreetMap API without sending personal data. '
+            'No location history or personal information is collected, transmitted, or stored on external servers. '
+            'All mock location settings and history remain on your device only.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTermsOfService(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Terms of Service'),
+        content: const SingleChildScrollView(
+          child: Text(
+            'GPS Fake is a developer tool designed for QA testing and development purposes only.\n\n'
+            'By using this app, you agree to:\n'
+            '• Use it only on devices you own or have explicit permission to test\n'
+            '• Not use it for deceptive purposes or to circumvent location-based security\n'
+            '• Accept full responsibility for how you use this tool\n\n'
+            'This app is provided "as is" without warranties of any kind.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSafetyNotice(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Safety Notice'),
+        content: const SingleChildScrollView(
+          child: Text(
+            'Important Safety Information:\n\n'
+            '• This app is for QA testing and development only\n'
+            '• Use only on devices you control\n'
+            '• Do not use to deceive location-based services\n'
+            '• Do not use to circumvent security or safety systems\n'
+            '• Always comply with local laws and regulations\n\n'
+            'Misuse of mock location tools may violate terms of service '
+            'or local laws in your jurisdiction.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );
