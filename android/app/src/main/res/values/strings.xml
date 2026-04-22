@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">GPS Fake</string>
+    <string name="app_name">GPS Faker</string>
     <string name="mock_location_channel">Mock location session</string>
 </resources>

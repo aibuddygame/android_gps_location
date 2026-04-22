@@ -107,6 +107,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        centerTitle: false,
         title: ShaderMask(
           shaderCallback: (bounds) => const LinearGradient(
             colors: [AppTheme.cyan, AppTheme.purple],
