@@ -1,4 +1,4 @@
-package com.example.gps_location_changer
+package com.gps.faker
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -166,7 +166,7 @@ class MockLocationForegroundService : Service() {
     }
 
     companion object {
-        const val ACTION_START = "com.example.gps_location_changer.START"
+        const val ACTION_START = "com.gps.faker.START"
         const val ACTION_STOP = "com.example.gps_location_changer.STOP"
         private const val CHANNEL_ID = "mock_location"
         private const val NOTIFICATION_ID = 7401

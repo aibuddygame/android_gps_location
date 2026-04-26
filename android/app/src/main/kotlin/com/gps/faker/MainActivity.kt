@@ -1,4 +1,4 @@
-package com.example.gps_location_changer
+package com.gps.faker
 
 import android.app.AppOpsManager
 import android.content.Context
